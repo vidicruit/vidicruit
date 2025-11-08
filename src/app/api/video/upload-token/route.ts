@@ -21,7 +21,7 @@ export async function POST() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          maxDurationSeconds: 600, // durata maximă a videoclipului (10 min)
+          maxDurationSeconds: 600,
         }),
       }
     );
@@ -35,7 +35,9 @@ export async function POST() {
     return NextResponse.json(data);
   } catch (error: any) {
     console.error("Upload error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
   }
 }
-
