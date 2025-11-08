@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 
 export function GET() {
@@ -25,12 +26,12 @@ export async function POST() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          maxDurationSeconds: 600, // durata maximă a clipului (poți schimba)
+          maxDurationSeconds: 600,
         }),
       }
     );
 
-    const data = await res.json();
+    const data: any = await res.json();
 
     if (!res.ok || data?.success === false) {
       const msg =
