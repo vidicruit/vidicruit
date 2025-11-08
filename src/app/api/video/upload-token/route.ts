@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 
+// test rapid: GET ar trebui să răspundă cu { ok: true }
+export function GET() {
+  return NextResponse.json({ ok: true });
+}
+
 export async function POST() {
   const accountId = process.env.CF_ACCOUNT_ID;
   const token = process.env.CF_STREAM_TOKEN;
@@ -12,7 +17,7 @@ export async function POST() {
   }
 
   try {
-    const response = await fetch(
+    const res = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/direct_upload`,
       {
         method: "POST",
@@ -21,23 +26,25 @@ export async function POST() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          maxDurationSeconds: 600,
+          maxDurationSeconds: 600, // ajustează cât vrei
         }),
       }
     );
 
-    const data = await response.json();
+    const data = await res.json();
 
-    if (!response.ok) {
-      throw new Error(data?.errors?.[0]?.message || "Failed to create upload link");
+    if (!res.ok || data?.success === false) {
+      const msg =
+        data?.errors?.[0]?.message ??
+        data?.messages?.[0]?.message ??
+        "Cloudflare error";
+      return NextResponse.json({ error: msg, details: data }, { status: 502 });
     }
 
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error("Upload error:", error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    const { uploadURL, uid } = data.result ?? {};
+    return NextResponse.json({ uploadURL, uid });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
