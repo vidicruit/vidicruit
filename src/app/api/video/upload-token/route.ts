@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-// test rapid: GET ar trebui să răspundă cu { ok: true }
 export function GET() {
   return NextResponse.json({ ok: true });
 }
@@ -26,7 +25,7 @@ export async function POST() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          maxDurationSeconds: 600, // ajustează cât vrei
+          maxDurationSeconds: 600, // durata maximă a clipului (poți schimba)
         }),
       }
     );
