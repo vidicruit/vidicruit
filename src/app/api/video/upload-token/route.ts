@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { NextResponse } from "next/server";
 
 const CLOUDFLARE_ACCOUNT_ID = process.env.CF_ACCOUNT_ID!;
@@ -14,8 +16,8 @@ type CloudflareDirectUploadResponse = {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const userId = (body as { userId?: string }).userId;
+    const body = (await req.json()) as { userId?: string };
+    const userId = body.userId;
 
     if (!userId) {
       return NextResponse.json(
