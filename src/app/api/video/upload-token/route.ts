@@ -3,9 +3,19 @@ import { NextResponse } from "next/server";
 const CLOUDFLARE_ACCOUNT_ID = process.env.CF_ACCOUNT_ID!;
 const CLOUDFLARE_API_TOKEN = process.env.CF_STREAM_TOKEN!;
 
+type CloudflareDirectUploadResponse = {
+  success: boolean;
+  result?: {
+    uploadURL: string;
+    uid: string;
+  };
+  errors?: unknown[];
+};
+
 export async function POST(req: Request) {
   try {
-    const { userId } = await req.json();
+    const body = await req.json();
+    const userId = (body as { userId?: string }).userId;
 
     if (!userId) {
       return NextResponse.json(
@@ -29,11 +39,11 @@ export async function POST(req: Request) {
       }
     );
 
-    const result = await cfRes.json();
+    const result = (await cfRes.json()) as CloudflareDirectUploadResponse;
 
-    if (!result.success) {
+    if (!result.success || !result.result) {
       return NextResponse.json(
-        { error: "Cloudflare Stream error", details: result },
+        { error: "Cloudflare Stream error", details: result.errors ?? null },
         { status: 500 }
       );
     }
@@ -41,8 +51,9 @@ export async function POST(req: Request) {
     const { uploadURL, uid } = result.result;
 
     return NextResponse.json({ uploadURL, uid }, { status: 200 });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Unknown error";
 
     return NextResponse.json(
       { error: message },
