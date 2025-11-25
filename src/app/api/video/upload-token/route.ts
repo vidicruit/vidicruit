@@ -1,63 +1,50 @@
 import { NextResponse } from "next/server";
 
-type CFDirectUploadResult = {
-  uploadURL?: string;
-  uid?: string;
-};
+const CLOUDFLARE_ACCOUNT_ID = process.env.CF_ACCOUNT_ID!;
+const CLOUDFLARE_API_TOKEN = process.env.CF_STREAM_TOKEN!;
 
-type CFDirectUploadResponse = {
-  success?: boolean;
-  result?: CFDirectUploadResult;
-  errors?: Array<{ message?: string }>;
-  messages?: Array<{ message?: string }>;
-};
-
-export function GET() {
-  return NextResponse.json({ ok: true });
-}
-
-export async function POST() {
-  const accountId = process.env.CF_ACCOUNT_ID;
-  const token = process.env.CF_STREAM_TOKEN;
-
-  if (!accountId || !token) {
-    return NextResponse.json(
-      { error: "Missing Cloudflare credentials" },
-      { status: 500 }
-    );
-  }
-
+export async function POST(req: Request) {
   try {
-    const res = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/direct_upload`,
+    const { userId } = await req.json();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Missing userId" },
+        { status: 400 }
+      );
+    }
+
+    const cfRes = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream/direct_upload`,
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${CLOUDFLARE_API_TOKEN}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          maxDurationSeconds: 600,
+          maxDurationSeconds: 300,
+          meta: { supabase_user_id: userId },
         }),
       }
     );
 
-    const data = (await res.json()) as CFDirectUploadResponse;
+    const result = await cfRes.json();
 
-    if (!res.ok || data.success === false) {
-      const msg =
-        data.errors?.[0]?.message ??
-        data.messages?.[0]?.message ??
-        "Cloudflare error";
-      return NextResponse.json({ error: msg, details: data }, { status: 502 });
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Cloudflare Stream error", details: result },
+        { status: 500 }
+      );
     }
 
-    const uploadURL = data.result?.uploadURL;
-    const uid = data.result?.uid;
+    const { uploadURL, uid } = result.result;
 
-    return NextResponse.json({ uploadURL, uid });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ uploadURL, uid }, { status: 200 });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message },
+      { status: 500 }
+    );
   }
 }
