@@ -41,9 +41,11 @@ export async function POST(req: Request) {
     const { uploadURL, uid } = result.result;
 
     return NextResponse.json({ uploadURL, uid }, { status: 200 });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+
     return NextResponse.json(
-      { error: err.message },
+      { error: message },
       { status: 500 }
     );
   }
