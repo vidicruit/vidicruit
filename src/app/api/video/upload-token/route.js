@@ -3,10 +3,18 @@ import { NextResponse } from "next/server";
 const CLOUDFLARE_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const CLOUDFLARE_API_TOKEN = process.env.CF_STREAM_TOKEN;
 
-/**
- * Aici tratăm cererea POST care vine de la Framer
- * și cerem la Cloudflare un link de upload direct.
- */
+// CORS – permitem accesul de pe Framer (și de oriunde, ca să nu-ți bați capul acum)
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export function OPTIONS() {
+  // răspunde la cererea preflight
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(req) {
   try {
     // 0. verificăm variabilele de mediu
@@ -17,7 +25,7 @@ export async function POST(req) {
           hasAccountId: !!CLOUDFLARE_ACCOUNT_ID,
           hasToken: !!CLOUDFLARE_API_TOKEN,
         },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -28,7 +36,7 @@ export async function POST(req) {
     if (!userId) {
       return NextResponse.json(
         { error: "Missing userId" },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -57,14 +65,17 @@ export async function POST(req) {
           status: cfRes.status,
           cfBody: cfJson,
         },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
     const { uploadURL, uid } = cfJson.result;
 
     // 3. trimitem înapoi către Framer uploadURL + uid
-    return NextResponse.json({ uploadURL, uid }, { status: 200 });
+    return NextResponse.json(
+      { uploadURL, uid },
+      { status: 200, headers: corsHeaders }
+    );
   } catch (err) {
     console.error("upload-token route error:", err);
     return NextResponse.json(
@@ -72,7 +83,7 @@ export async function POST(req) {
         error: "Unexpected server error",
         details: String(err),
       },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
