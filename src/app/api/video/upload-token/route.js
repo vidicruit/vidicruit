@@ -3,17 +3,11 @@ import { NextResponse } from "next/server";
 const CLOUDFLARE_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 const CLOUDFLARE_API_TOKEN = process.env.CF_STREAM_TOKEN;
 
-type CloudflareDirectUploadResponse = {
-  success: boolean;
-  result?: { uploadURL: string; uid: string };
-  errors?: any[];
-};
-
-type UploadBody = {
-  userId?: string;
-};
-
-export async function POST(req: Request) {
+/**
+ * Aici tratăm cererea POST care vine de la Framer
+ * și cerem la Cloudflare un link de upload direct.
+ */
+export async function POST(req) {
   try {
     // 0. verificăm variabilele de mediu
     if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN) {
@@ -27,9 +21,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. citim corpul cererii
-    const body = (await req.json()) as UploadBody;
-    if (!body.userId) {
+    // 1. citim corpul cererii (userId de la Framer)
+    const body = await req.json().catch(() => null);
+    const userId = body && body.userId;
+
+    if (!userId) {
       return NextResponse.json(
         { error: "Missing userId" },
         { status: 400 }
@@ -47,13 +43,12 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           maxDurationSeconds: 300,
-          meta: { supabase_user_id: body.userId },
+          meta: { supabase_user_id: userId },
         }),
       }
     );
 
-    const cfJson =
-      (await cfRes.json()) as CloudflareDirectUploadResponse;
+    const cfJson = await cfRes.json();
 
     if (!cfRes.ok || !cfJson.success || !cfJson.result) {
       return NextResponse.json(
@@ -67,6 +62,8 @@ export async function POST(req: Request) {
     }
 
     const { uploadURL, uid } = cfJson.result;
+
+    // 3. trimitem înapoi către Framer uploadURL + uid
     return NextResponse.json({ uploadURL, uid }, { status: 200 });
   } catch (err) {
     console.error("upload-token route error:", err);
