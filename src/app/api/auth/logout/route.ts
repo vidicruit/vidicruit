@@ -3,24 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 export async function POST() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        persistSession: false,
-      },
-      global: {
-        headers: {
-          Cookie: cookieStore
-            .getAll()
-            .map(c => `${c.name}=${c.value}`)
-            .join("; "),
-        },
-      },
-    }
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
   await supabase.auth.signOut();
